@@ -19,14 +19,10 @@ PORT = int(os.getenv("PORT", "8000"))
 client = MongoClient(MONGODB_URI)
 db = client[MONGODB_DB]
 
+# ======== MONGODB USER COLLECTION ========
+users_collection = db["users"]
+
 app = FastAPI()
-
-
-
-# ======== CONFIG FOR JWT ========
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
 
 # ========= FROM ROBOTS ===============
@@ -52,20 +48,19 @@ class Robot(BaseModel):
 # --- Get all robots ---
 @app.get("/robots")
 def get_robots():
-    robots = list(collection.find())   # Retrieve all documents
+    robots = list(collection.find())      # Retrieve all documents
     for r in robots:
-        r["_id"] = str(r["_id"])        # Convert ObjectId to string
+        r["_id"] = str(r["_id"])          # Convert ObjectId to string
     return robots
 
-# --- Add robot ---
-@app.post("/robots")
-def add_robot(robot: Robot):
-    collection.insert_one(robot.model_dump())
-    return {"message": "Robot added successfully"}
 
 
 
 
+# ======== CONFIG FOR JWT ========
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
 # ======== BCRYPT HELPERS ========
 def hash_password(password: str) -> str:
@@ -91,8 +86,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 #         return None
 #     return {"email": email, "hashed_password": hashed_pw}
 
-# ======== MONGODB USER COLLECTION ========
-users_collection = db["users"]
 
 def save_user_to_db(email: str, hashed_pw: str):
     # Insert document into MongoDB Atlas
@@ -193,3 +186,9 @@ def read_protected_data(current_user: str = Depends(get_current_user)):
 @app.get("/hello")
 def hello():
     return {"message": "Hello from FastAPI"}
+
+# --- ROBOTS ---
+@app.post("/robots")
+def add_robot(robot: Robot, current_user: str = Depends(get_current_user)):
+    collection.insert_one(robot.model_dump())
+    return {"message": "Robot added successfully"}
